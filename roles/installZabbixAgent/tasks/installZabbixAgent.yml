@@ -1,9 +1,36 @@
 ---
 
+ - name: Download All Zabbix Package
+   ansible.builtin.get_url:
+     url: https://repo.zabbix.com/zabbix/5.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_5.0-1+focal_all.deb
+     dest: /root/zabbix-release_5.0-1+focal_all.deb
+   when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
+
+ - name: Install Package
+   shell: dpkg -i /root/zabbix-release_5.0-1+focal_all.deb 
+   when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
+
+# - name: Update All Packages
+#   shell: apt-get update -y
+#   when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
+
+ - name: Update All Packages
+   apt:
+     name: "*"
+     update_cache: yes
+     state: latest
+   when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
+
  - name: Install Zabbix Agent Package - Debian/Ubuntu
    apt: 
      name: zabbix-agent
      state: present
+   when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
+
+ - name: Delete Package Downloaded
+   file:
+     path: /root/zabbix-release_5.0-1+focal_all.deb
+     state: absent
    when: ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
 
  - name: Install Zabbix Agent Repo - Redhat/Centos
@@ -19,11 +46,11 @@
    when: ansible_distribution == "CentOS" or ansible_distribution == "RedHat"
 
  - name: Zabbix Agent Config Path
-   ansible.builtin.shell: find /etc -iname "zabbix_agentd.conf" -type "f"
+   shell: find /etc -iname "zabbix_agentd.conf" -type "f"
    register: path_zabbix_agent_etc
 
  - name: Zabbix Agent Config Path
-   ansible.builtin.shell: find /usr -iname "zabbix_agentd.conf" -type "f"
+   shell: find /usr -iname "zabbix_agentd.conf" -type "f"
    register: path_zabbix_agent_usr
 
  - name: Config Server 
@@ -67,11 +94,11 @@
    when: '"{{ path_zabbix_agent_usr.stdout }}" == "/usr/local/zabbix/etc/zabbix_agentd.conf"'
 
  - name: Get hostname VM
-   ansible.builtin.shell: cat /etc/hostname
+   shell: cat /etc/hostname
    register: hostname_vm
 
  - name: Config Hostname
-   ansible.builtin.lineinfile:
+   lineinfile:
      path: "{{ path_zabbix_agent_etc.stdout }}"
      regexp: '^Hostname='
      insertafter: '^Hostname='
@@ -79,7 +106,7 @@
    when: '"{{ hostname_vm.stdout }}" != "centos7-template.rmansur.com.br" and "{{ path_zabbix_agent_etc.stdout }}" == "/etc/zabbix_agentd.conf" or "{{ path_zabbix_agent_etc.stdout }}" == "/etc/zabbix/zabbix_agentd.conf"'
 
  - name: Config Hostname
-   ansible.builtin.lineinfile:
+   lineinfile:
      path: "{{ path_zabbix_agent_usr.stdout }}"
      regexp: '^Hostname='
      insertafter: '^Hostname='
@@ -96,7 +123,7 @@
    failed_when: false
 
  - name: Return Status Zabbix Agent Service Output - Loading...
-   command: sleep 10
+   command: sleep 20
    ignore_errors: yes
    failed_when: false
 
